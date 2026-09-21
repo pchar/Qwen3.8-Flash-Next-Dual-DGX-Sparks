@@ -870,7 +870,7 @@ if $DO_LAUNCH; then
                 err "PLE_PACKED_TABLE_DIR=$PLE_PACKED_TABLE_DIR holds no .packed_u8 table on the head. Build it first: python3 files/build_ple_packed_table_fp8.py <snapshot_dir> $PLE_PACKED_TABLE_DIR"
             fi
             ssh_worker "mkdir -p '$PLE_PACKED_TABLE_DIR'" || err "could not create $PLE_PACKED_TABLE_DIR on worker"
-            if ! ssh_worker "test -s '$PLE_PACKED_TABLE_DIR'/\$(basename \$(compgen -G '$PLE_PACKED_TABLE_DIR/*.packed_u8' | head -1))"; then
+            if ! ssh_worker "test -s '$PLE_PACKED_TABLE_DIR'/\$(basename \$(find '$PLE_PACKED_TABLE_DIR' -maxdepth 1 -type f -name '*.packed_u8' -print -quit))"; then
                 info "Copying PLE packed table to worker (47.7 GiB, one time)..."
                 rsync -a "$PLE_PACKED_TABLE_DIR/" "${WORKER_USER:+${WORKER_USER}@}${WORKER_IP}:$PLE_PACKED_TABLE_DIR/" || err "rsync of PLE packed table to worker failed"
             fi
@@ -1231,7 +1231,7 @@ LAUNCH_EOF
         nohup bash "$SCRIPT_DIR/files/memwatch.sh" vllm-fn "$MEMWATCH_MIN_GIB" > "$SCRIPT_DIR/logs/memwatch-head.log" 2>&1 &
         ok "Head watchdog running (kills vllm-fn if MemAvailable < ${MEMWATCH_MIN_GIB} GiB)"
         if scp -q "$SCRIPT_DIR/files/memwatch.sh" "${WORKER_USER:+${WORKER_USER}@}${WORKER_IP}:/tmp/memwatch.sh"; then
-            ssh_worker "pkill -f memwatch.sh 2>/dev/null; nohup bash /tmp/memwatch.sh vllm-fn $MEMWATCH_MIN_GIB > /tmp/memwatch.log 2>&1 &" >/dev/null 2>&1
+            ssh_worker "pkill -f '^bash /tmp/memwatch.sh vllm-fn' 2>/dev/null || true; nohup bash /tmp/memwatch.sh vllm-fn $MEMWATCH_MIN_GIB > /tmp/memwatch.log 2>&1 &" >/dev/null 2>&1
             ok "Worker watchdog running (/tmp/memwatch.log)"
         fi
     fi
