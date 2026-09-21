@@ -55,3 +55,5 @@ files/draft_vocab_*.txt
 # MTP_DRAFT_VOCAB default in .env.sample work out of the box. Generated
 # vocabularies stay untracked.
 !files/draft_vocab_en_code_47k.txt
+start.sh.bak-ple-offload
+.env.bak-*
