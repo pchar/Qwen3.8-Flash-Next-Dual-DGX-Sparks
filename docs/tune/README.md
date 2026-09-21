@@ -37,4 +37,4 @@ Profiles: `profiles/<candidate>.env` (no secrets — HF_TOKEN stays in `.env`).
 
 | # | candidate | commit | boot | eval score | verdict | ticket |
 |---|-----------|--------|------|-----------|---------|--------|
-| 0 | baseline gmu0.70 | _pending_ | _running_ | _pending_ | _pending_ | TASK-73.01 |
+| 0 | baseline gmu0.70 | 86c9a70 (+result) | PASS | **83/100** (53P/8Pa/8F) | BASELINE — pass, ref established | TASK-73.01 |
