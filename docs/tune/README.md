@@ -38,3 +38,4 @@ Profiles: `profiles/<candidate>.env` (no secrets — HF_TOKEN stays in `.env`).
 | # | candidate | commit | boot | eval score | verdict | ticket |
 |---|-----------|--------|------|-----------|---------|--------|
 | 0 | baseline gmu0.70 | 86c9a70 (+result) | PASS | **83/100** (53P/8Pa/8F) | BASELINE — pass, ref established | TASK-73.01 |
+| 2 | gmu0.75 | cc74c2a (+record) | PASS | **85/100** (54P/9Pa/6F) | PASS — new best safe GMU, KV +49% | TASK-73.02 |
