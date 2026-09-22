@@ -28,7 +28,7 @@ Profiles: `profiles/<candidate>.env` (no secrets — HF_TOKEN stays in `.env`).
 |---|------|--------|-------|
 | 0 | (none — baseline) | GMU 0.70 as validated | TASK-73.01, seeds leaderboard |
 | 1 | GPU_MEMORY_UTILIZATION | 0.75 → **0.80** (stop) | DONE — 0.75 PASS (85/100), 0.80 FAIL (watchdog kill); sweep stopped at first unsafe, 0.75 = last known-good |
-| 2 | MAX_NUM_BATCHED_TOKENS | 4096 vs 8192 | at best safe GMU; interactive vs long-context winner |
+| 2 | MAX_NUM_BATCHED_TOKENS | 4096 vs 8192 | 4096 FAIL (eval 83<85); **8192 = winner**, GMU sweep done — step 2 DONE |
 | 3 | MTP_NUM_SPECULATIVE_TOKENS | 0 vs 3 | acceptance rate, decode tok/s, KV impact |
 | 4 | ENABLE_EXPERT_PARALLEL | true | ONLY if all above stable |
 | + | (discretion) | any other .env knob | one per ticket, @nxt discretion |
@@ -40,3 +40,4 @@ Profiles: `profiles/<candidate>.env` (no secrets — HF_TOKEN stays in `.env`).
 | 0 | baseline gmu0.70 | 86c9a70 (+result) | PASS | **83/100** (53P/8Pa/8F) | BASELINE — pass, ref established | TASK-73.01 |
 | 2 | gmu0.75 | cc74c2a (+record) | PASS | **85/100** (54P/9Pa/6F) | PASS — new best safe GMU, KV +49% | TASK-73.02 |
 | 3 | gmu0.80 | e7a7ec1 (+record) | **FAIL** (watchdog kill @ KV sizing) | n/a (never served) | **FAIL — first unsafe GMU, sweep STOPPED, rolled back to 0.75** | TASK-73.03 |
+| 4 | mnt4096 | 781c02a (+record) | PASS | **83/100** (54P/6Pa/9F) | **FAIL — eval 83 < 85 gate, 3 scen partial->fail; 8192 = batch-budget winner, rolled back to 0.75/8192** | TASK-73.04 |
