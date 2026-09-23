@@ -99,6 +99,7 @@ Candidate rows (C1–C15, filled by each sweep run):
 | C7 | C6 0.79921875 PASS -> bisection midpoint of (0.79921875, 0.80) -> test 0.799609375 | GMU 0.79921875->0.799609375 | PASS | 3,876,094 | 14.79x | 86 (118/138) | 22.0-24.0 / 87.39s cold | ~8.7 GiB | **PASS-stable / no score gain; PHASE A closed — GMU*=0.799609375; next interval (0.799609375, 0.80)** |
 | C8 | C7 PASS -> PHASE B knob 1: MTP 0->3 + MTP_DRAFT_VOCAB 47k at GMU* (spec A/B vs MTP0 best-so-far) | GMU* fixed; MTP 0->3, draft 47k | **FAIL** | 3,122,296 | 11.91x | 85 (55P/7Pa/7F) eval ok | n/a | ~10.9 GiB pre-crash | **FAIL — engine SIGKILL 137 mid-decodebench (GPU OOM NV_ERR_NO_MEMORY); MTP3+47k excluded-unsafe; MTP reverts to 0 best-so-far** |
 | C9 | C8 FAIL -> revert MTP to 0; knob MNT 8192->16384 at GMU* | GMU* fixed; MNT 8192->16384, MTP0 | **FAIL** | 3,347,260 | 12.77x | 86 (55P/9Pa/5F) eval ok | 22.1-24.3 @1k then crash | ~13.0 GiB pre-crash | **FAIL — SIGKILL 137 on 200k prefill (GPU OOM NV_ERR_NO_MEMORY); MNT 16384 excluded-crash; MNT knob resolves to 8192** |
+| C12 | knob 4: mamba-ssm bf16->fp8 at GMU* (shrink GDN state) | GMU* fixed; MAMBA bf16->fp8 | **FAIL (invalid)** | — | — | — | — | — | — | **FAIL — vllm serve rejects --mamba-ssm-cache-dtype fp8 (invalid choice; build v0.1.dev20073 supports auto/bf16/f16/f32 only). MAMBA knob RESOLVED to bf16 (LKG); fp8 excluded-invalid** |
 | C14 | — | — | — | — | — | — | — | — | — |
 | C15 | — | — | — | — | — | — | — | — | — |
 
