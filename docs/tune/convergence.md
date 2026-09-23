@@ -50,6 +50,10 @@ MemAvail margin eroding with GMU: C1 16.96 / C2 13.17 / C3 12.30 / C4 12.0 / C5 
 C6 perf caveat: 200k rows measured WARM (cold prefill absorbed during the 39-min eval; re-run confirmed still warm) — cold-200k TTFT not comparable to C1-C5; decode ~24 tok/s (warm) also not directly comparable
 
 Per-knob best-so-far (Phase B baseline, initialized to LKG):
+PHASE B decision (C12, derived from C8-C9 FAIL + reframe):
+- GMU* 0.799609375 knife-edge: C7 (MNT 8192/MTP0) survives decode load; MTP3 (C8) and MNT16384 (C9) both SIGKILL 137 GPU-OOM. KV headroom moot (scheduler-limited at seqs=8). Quality optimum is LKG 89.
+- MTP knob -> 0 (C8 crash). MNT knob -> 8192 (C9 crash; 004 4096 FAIL). seqs -> 8 (untested; deferred). EP excluded (006: -6pts + mem leak).
+- C12 = MAMBA_SSM_CACHE_DTYPE bfloat16 -> fp8 at GMU*, MTP0, MNT 8192. Rationale: the 36 GDN layers keep BF16 recurrent state per request (README: memory hog); fp8 shrinks it, freeing GPU room to stabilize GMU* and possibly raise KV. Genuinely untested. Keep mamba fp8 iff eval >= 86 AND survives decodebench (else revert to bf16).
 PHASE B decision (derived from C1-C7 + prior 001-008):
 - GMU* FROZEN = 0.799609375 (KV 3,876,094, 14.79x; eval 86, below LKG 89).
 - Dicotomic candidate space (one knob per test): MTP {0, 3+47k}, MNT {8192,16384,4096}, seqs {8,16}, mamba-ssm {bf16,fp8}, EP {false,true}.
