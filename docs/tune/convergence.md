@@ -41,15 +41,21 @@ point in the space); otherwise it is recorded from 006 as excluded-unsafe.
 ## Search state
 
 ```
-PHASE: A (GMU root search, slots C1–C7)
-interval (safe, unsafe) = (0.79921875, 0.80)   # 0.79921875 PASS (C6); 0.80 FAIL (003)
-GMU* = 0.79921875 (last safe GMU tested; frozen after C7)
-KV at GMU* = 3,854,880 fp8 tokens (MTP0, 14.71x at 262K), eval at GMU* = 86/100 (C6; inside 83-89 variance band, below LKG 89)
+PHASE: A CLOSED (C1–C7 all PASS). PHASE B: discrete-knob dicotomic search at GMU* (slots C8–C13)
+interval (safe, unsafe) = (0.799609375, 0.80)   # C7 PASS (C7); 0.80 FAIL (003)
+GMU* = 0.799609375 (last safe GMU tested; FROZEN — Phase A closed)
+KV at GMU* = 3,876,094 fp8 tokens (MTP0, 14.79x at 262K), eval at GMU* = 86/100 (C7; inside 83-89 variance band, below LKG 89)
 KV marginal slope: C5->C6 −21.2k fp8 tokens per +0.00078125 GMU — NON-MONOTONIC (allocator block granularity); marginal gain has hit ~0 before the 0.80 cliff, so C7 will move KV ~0 either way
 MemAvail margin eroding with GMU: C1 16.96 / C2 13.17 / C3 12.30 / C4 12.0 / C5 11 / C6 9 GiB (post-boot, orcus) — floor intact at C6 (post-perf 7 GiB); C7 at 0.799609375 is 0.000390625 from 0.80, a memwatch kill is the leading risk, as at 0.80 (003).
 C6 perf caveat: 200k rows measured WARM (cold prefill absorbed during the 39-min eval; re-run confirmed still warm) — cold-200k TTFT not comparable to C1-C5; decode ~24 tok/s (warm) also not directly comparable
 
 Per-knob best-so-far (Phase B baseline, initialized to LKG):
+PHASE B decision (derived from C1-C7 + prior 001-008):
+- GMU* FROZEN = 0.799609375 (KV 3,876,094, 14.79x; eval 86, below LKG 89).
+- Dicotomic candidate space (one knob per test): MTP {0, 3+47k}, MNT {8192,16384,4096}, seqs {8,16}, mamba-ssm {bf16,fp8}, EP {false,true}.
+- Per-knob best-so-far (init to LKG): MTP 0 / MNT 8192 / seqs 8 / mamba bf16 / EP false.
+- Excluded-unsafe so far: GMU 0.80 (003), EP=true@0.75 (006), MNT 4096@0.75 (004).
+- C8 = MTP_NUM_SPECULATIVE_TOKENS 3 + MTP_DRAFT_VOCAB 47k at GMU* (speculation A/B: MTP3 vs MTP0 best-so-far; prior 007 parked MTP3+47k@0.75 with untuned speed, decodebench not comparable). Test the untested MTP3+47k at GMU*; if PASS and eval >= 86, keep MTP3 as best-so-far MTP.
   MTP  = 0
   MNT  = 8192
   seqs = 8
@@ -57,7 +63,7 @@ Per-knob best-so-far (Phase B baseline, initialized to LKG):
   EP   = false
 Excluded-unsafe so far: EP=true@0.75 (006), GMU 0.80 (003), MNT 4096@0.75 (004)
 Score note: eval scores across stable GMUs so far — 0.70: 83 (001), 0.75: 85/89 (002/005/008),
-0.775: 86 (C1), 0.7875: 86 (C2), 0.79375: 85 (C3), 0.796875: 86 (C4), 0.7984375: 83 (C5), 0.79921875: 86 (C6). GMU alone has not lifted the score above the LKG 89 reference.
+0.775: 86 (C1), 0.7875: 86 (C2), 0.79375: 85 (C3), 0.796875: 86 (C4), 0.7984375: 83 (C5), 0.79921875: 86 (C6), 0.799609375: 86 (C7). GMU alone has NOT lifted the score above the LKG 89 reference — KV headroom (+30% vs LKG) is the Phase A gain, not eval.
 ```
 
 ## Results table
@@ -84,7 +90,7 @@ Candidate rows (C1–C15, filled by each sweep run):
 | C4 | C3 0.79375 PASS -> bisection midpoint of (0.79375, 0.80) -> test 0.796875 | GMU 0.79375->0.796875 | PASS | 3,862,456 | 14.73x | 86 (56P/7Pa/6F) | 22.2 / 89.25s | 12.0/12 GiB (post-boot) | **PASS-stable / no score gain** — safe := 0.796875; next interval (0.796875, 0.80) |
 | C5 | C4 0.796875 PASS -> bisection midpoint of (0.796875, 0.80) -> test 0.7984375 | GMU 0.796875->0.7984375 | PASS | 3,876,094 | 14.79x | 83 (114/138) | 22.0 / 87.15s | 11/14 GiB (post-boot) | **PASS-stable / no score gain** — safe := 0.7984375; next interval (0.7984375, 0.80) |
 | C6 | C5 0.7984375 PASS -> bisection midpoint of (0.7984375, 0.80) -> test 0.79921875 | GMU 0.7984375->0.79921875 | PASS | 3,854,880 | 14.71x | 86 (55P/8Pa/6F) | 24.0 / n/c (warm; caveat) | 9/14 GiB post-boot, 7/11 post-perf | **PASS-stable / no score gain; KV −21k vs C5 (no marginal gain)** — safe := 0.79921875; next interval (0.79921875, 0.80) |
-| C7 | — | — | — | — | — | — | — | — | — |
+| C7 | C6 0.79921875 PASS -> bisection midpoint of (0.79921875, 0.80) -> test 0.799609375 | GMU 0.79921875->0.799609375 | PASS | 3,876,094 | 14.79x | 86 (118/138) | 22.0-24.0 / 87.39s cold | ~8.7 GiB | **PASS-stable / no score gain; PHASE A closed — GMU*=0.799609375; next interval (0.799609375, 0.80)** |
 | C8–C13 | — | — | — | — | — | — | — | — | — |
 | C14 | — | — | — | — | — | — | — | — | — |
 | C15 | — | — | — | — | — | — | — | — | — |
