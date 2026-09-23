@@ -82,7 +82,7 @@ Candidate rows (C1–C15, filled by each sweep run):
 | C3 | C2 0.7875 PASS -> bisection midpoint of (0.7875, 0.80) -> test 0.79375 | GMU 0.7875->0.79375 | PASS | 3,760,932 | 14.35x | 85 (55P/7Pa/7F) | 21.9 / 86.99s | 12.30/15 GiB (post-boot) | **PASS-stable / no score gain** — safe := 0.79375; next interval (0.79375, 0.80) |
 | C4 | C3 0.79375 PASS -> bisection midpoint of (0.79375, 0.80) -> test 0.796875 | GMU 0.79375->0.796875 | PASS | 3,862,456 | 14.73x | 86 (56P/7Pa/6F) | 22.2 / 89.25s | 12.0/12 GiB (post-boot) | **PASS-stable / no score gain** — safe := 0.796875; next interval (0.796875, 0.80) |
 | C5 | C4 0.796875 PASS -> bisection midpoint of (0.796875, 0.80) -> test 0.7984375 | GMU 0.796875->0.7984375 | PASS | 3,876,094 | 14.79x | 83 (114/138) | 22.0 / 87.15s | 11/14 GiB (post-boot) | **PASS-stable / no score gain** — safe := 0.7984375; next interval (0.7984375, 0.80) |
-| C6 | — | — | — | — | — | — | — | — | — |
+| C6 | C5 0.7984375 PASS -> bisection midpoint of (0.7984375, 0.80) -> test 0.79921875 | GMU 0.7984375->0.79921875 (derived, testing) | — | — | — | — | — | — | in progress |
 | C7 | — | — | — | — | — | — | — | — | — |
 | C8–C13 | — | — | — | — | — | — | — | — | — |
 | C14 | — | — | — | — | — | — | — | — | — |
@@ -99,7 +99,7 @@ Candidate rows (C1–C15, filled by each sweep run):
 - **Risk note:** 0.7984375 is only 0.0015625 below the known-unsafe 0.80 and MemAvail has eroded to ~12 GiB (C1 16.96 / C2 13.17 / C3 12.30 / C4 12.0) — a memwatch kill at warmup is now the most likely outcome, as at 0.80 (003).
 - **RESULT:** PASS — boot ~12 min, 0 OOM/Xid/watchdog (boot + eval + perf), KV 3,876,094 (14.79x), eval 83/100 (114/138), perf 22.0 tok/s / 87.15s cold TTFT, MemAvail 11/14 GiB post-boot (floor intact). safe := 0.7984375; GMU* = 0.7984375; next interval (0.7984375, 0.80).
 
-### C6 (TASK-73.14) — derived 2026-09-23 from C5 result (to be executed by next run)
+### C6 (TASK-73.14) — derived 2026-09-23 from C5 result (EXECUTING — see docs/tune/014-c6-gmu0.79922.md)
 
 - **Previous result:** C5 GMU 0.7984375 PASS (stable boot, 0 OOM/Xid/watchdog, MemAvail 11/14 GiB post-boot; KV 3,876,094 = 14.79x; eval 83/100).
 - **Rule applied:** PHASE A bisection — 0.7984375 PASS -> safe := 0.7984375; test midpoint of (0.7984375, 0.80): (0.7984375 + 0.80) / 2 = **0.79921875** (8-decimal).
