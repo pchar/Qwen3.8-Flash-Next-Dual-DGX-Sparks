@@ -50,6 +50,10 @@ MemAvail margin eroding with GMU: C1 16.96 / C2 13.17 / C3 12.30 / C4 12.0 / C5 
 C6 perf caveat: 200k rows measured WARM (cold prefill absorbed during the 39-min eval; re-run confirmed still warm) — cold-200k TTFT not comparable to C1-C5; decode ~24 tok/s (warm) also not directly comparable
 
 Per-knob best-so-far (Phase B baseline, initialized to LKG):
+PHASE B decision (C11, derived from C8-C12 + reframe):
+- Knobs resolved: MTP -> 0 (C8 crash), MNT -> 8192 (C9 crash; 004 4096 FAIL), MAMBA -> bf16 (C12 fp8 invalid in this vLLM build), EP excluded (006: -6pts + mem leak).
+- GMU* knife-edge: only C7 shape survives decode load; KV headroom moot (scheduler-limited at seqs=8). Quality optimum LKG 89.
+- C11 = MAX_NUM_SEQS 8 -> 16 at GMU*, MTP0/MNT8192/mamba-bf16. Rationale: README identifies MAX_NUM_SEQS as the real concurrency lever (scheduler admits <=8 at 262K); raising to 16 lets more requests be resident. RISK: 16 concurrent GDN recurrent-states add GPU memory at knife-edge GMU* — near-certain crash. Keep seqs 16 iff eval >= 86 AND survives decodebench (else revert to 8).
 PHASE B decision (C12, derived from C8-C9 FAIL + reframe):
 - GMU* 0.799609375 knife-edge: C7 (MNT 8192/MTP0) survives decode load; MTP3 (C8) and MNT16384 (C9) both SIGKILL 137 GPU-OOM. KV headroom moot (scheduler-limited at seqs=8). Quality optimum is LKG 89.
 - MTP knob -> 0 (C8 crash). MNT knob -> 8192 (C9 crash; 004 4096 FAIL). seqs -> 8 (untested; deferred). EP excluded (006: -6pts + mem leak).
