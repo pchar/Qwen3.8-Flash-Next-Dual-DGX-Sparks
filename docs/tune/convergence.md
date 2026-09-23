@@ -56,7 +56,8 @@ PHASE B decision (derived from C1-C7 + prior 001-008):
 - Per-knob best-so-far (init to LKG): MTP 0 / MNT 8192 / seqs 8 / mamba bf16 / EP false.
 - Excluded-unsafe so far: GMU 0.80 (003), EP=true@0.75 (006), MNT 4096@0.75 (004).
 - C8 = MTP_NUM_SPECULATIVE_TOKENS 3 + MTP_DRAFT_VOCAB 47k at GMU* (speculation A/B: MTP3 vs MTP0 best-so-far). RESULT: **FAIL** — eval 85/100 completed, but engine SIGKILL 137 mid-decodebench (GPU OOM NV_ERR_NO_MEMORY); MTP3 draft head + KV reservations pushed GPU mem over the limit. MTP3+47k EXCLUDED-unsafe; MTP knob reverts to 0 (best-so-far).
-- C9 = MAX_NUM_BATCHED_TOKENS 8192->16384 at GMU*, MTP0 (knob 2; MNT A/B vs 8192 best-so-far; 004 tested 4096@0.75 FAIL, 16384 untested). Keep MNT 16384 as best-so-far iff eval >= 86.
+- C9 = MAX_NUM_BATCHED_TOKENS 8192->16384 at GMU*, MTP0 (knob 2). RESULT: **FAIL** — eval 86/100 ok, but SIGKILL 137 on 200k decodebench prefill (GPU OOM NV_ERR_NO_MEMORY; larger chunk spikes activation). MNT 16384 EXCLUDED-crash; MNT knob RESOLVED to 8192 (004: 4096 FAIL, 16384 crash, 8192 = interactive winner).
+- **Reframe (from repo knowledge + README + 001-008):** GMU* 0.799609375 is knife-edge — only MNT 8192+MTP0 survives decode load; any memory-raising knob (MTP3, MNT16384) crashes. KV headroom is MOOT: at MAX_NUM_SEQS=8 the scheduler admits fewer requests than the cache holds, so Phase A KV gains don't lift serving. Quality optimum is LKG (GMU 0.75/MNT 8192/MTP0/EP false, 89/100); no knob lifts quality above 89. Remaining genuinely-untested knobs (seqs 16, mamba fp8) are capacity/latency levers, likely to crash or not lift quality at GMU*.
   MTP  = 0
   MNT  = 8192
   seqs = 8
@@ -93,7 +94,7 @@ Candidate rows (C1–C15, filled by each sweep run):
 | C6 | C5 0.7984375 PASS -> bisection midpoint of (0.7984375, 0.80) -> test 0.79921875 | GMU 0.7984375->0.79921875 | PASS | 3,854,880 | 14.71x | 86 (55P/8Pa/6F) | 24.0 / n/c (warm; caveat) | 9/14 GiB post-boot, 7/11 post-perf | **PASS-stable / no score gain; KV −21k vs C5 (no marginal gain)** — safe := 0.79921875; next interval (0.79921875, 0.80) |
 | C7 | C6 0.79921875 PASS -> bisection midpoint of (0.79921875, 0.80) -> test 0.799609375 | GMU 0.79921875->0.799609375 | PASS | 3,876,094 | 14.79x | 86 (118/138) | 22.0-24.0 / 87.39s cold | ~8.7 GiB | **PASS-stable / no score gain; PHASE A closed — GMU*=0.799609375; next interval (0.799609375, 0.80)** |
 | C8 | C7 PASS -> PHASE B knob 1: MTP 0->3 + MTP_DRAFT_VOCAB 47k at GMU* (spec A/B vs MTP0 best-so-far) | GMU* fixed; MTP 0->3, draft 47k | **FAIL** | 3,122,296 | 11.91x | 85 (55P/7Pa/7F) eval ok | n/a | ~10.9 GiB pre-crash | **FAIL — engine SIGKILL 137 mid-decodebench (GPU OOM NV_ERR_NO_MEMORY); MTP3+47k excluded-unsafe; MTP reverts to 0 best-so-far** |
-| C9 | C8 FAIL -> revert MTP to 0 (best-so-far); next knob MNT 8192->16384 at GMU* | GMU* fixed; MNT 8192->16384, MTP0 | — | — | — | — | — | — | — |
+| C9 | C8 FAIL -> revert MTP to 0; knob MNT 8192->16384 at GMU* | GMU* fixed; MNT 8192->16384, MTP0 | **FAIL** | 3,347,260 | 12.77x | 86 (55P/9Pa/5F) eval ok | 22.1-24.3 @1k then crash | ~13.0 GiB pre-crash | **FAIL — SIGKILL 137 on 200k prefill (GPU OOM NV_ERR_NO_MEMORY); MNT 16384 excluded-crash; MNT knob resolves to 8192** |
 | C14 | — | — | — | — | — | — | — | — | — |
 | C15 | — | — | — | — | — | — | — | — | — |
 
