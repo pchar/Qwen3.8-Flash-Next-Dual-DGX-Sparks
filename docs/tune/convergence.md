@@ -55,7 +55,8 @@ PHASE B decision (derived from C1-C7 + prior 001-008):
 - Dicotomic candidate space (one knob per test): MTP {0, 3+47k}, MNT {8192,16384,4096}, seqs {8,16}, mamba-ssm {bf16,fp8}, EP {false,true}.
 - Per-knob best-so-far (init to LKG): MTP 0 / MNT 8192 / seqs 8 / mamba bf16 / EP false.
 - Excluded-unsafe so far: GMU 0.80 (003), EP=true@0.75 (006), MNT 4096@0.75 (004).
-- C8 = MTP_NUM_SPECULATIVE_TOKENS 3 + MTP_DRAFT_VOCAB 47k at GMU* (speculation A/B: MTP3 vs MTP0 best-so-far; prior 007 parked MTP3+47k@0.75 with untuned speed, decodebench not comparable). Test the untested MTP3+47k at GMU*; if PASS and eval >= 86, keep MTP3 as best-so-far MTP.
+- C8 = MTP_NUM_SPECULATIVE_TOKENS 3 + MTP_DRAFT_VOCAB 47k at GMU* (speculation A/B: MTP3 vs MTP0 best-so-far). RESULT: **FAIL** — eval 85/100 completed, but engine SIGKILL 137 mid-decodebench (GPU OOM NV_ERR_NO_MEMORY); MTP3 draft head + KV reservations pushed GPU mem over the limit. MTP3+47k EXCLUDED-unsafe; MTP knob reverts to 0 (best-so-far).
+- C9 = MAX_NUM_BATCHED_TOKENS 8192->16384 at GMU*, MTP0 (knob 2; MNT A/B vs 8192 best-so-far; 004 tested 4096@0.75 FAIL, 16384 untested). Keep MNT 16384 as best-so-far iff eval >= 86.
   MTP  = 0
   MNT  = 8192
   seqs = 8
@@ -91,7 +92,8 @@ Candidate rows (C1–C15, filled by each sweep run):
 | C5 | C4 0.796875 PASS -> bisection midpoint of (0.796875, 0.80) -> test 0.7984375 | GMU 0.796875->0.7984375 | PASS | 3,876,094 | 14.79x | 83 (114/138) | 22.0 / 87.15s | 11/14 GiB (post-boot) | **PASS-stable / no score gain** — safe := 0.7984375; next interval (0.7984375, 0.80) |
 | C6 | C5 0.7984375 PASS -> bisection midpoint of (0.7984375, 0.80) -> test 0.79921875 | GMU 0.7984375->0.79921875 | PASS | 3,854,880 | 14.71x | 86 (55P/8Pa/6F) | 24.0 / n/c (warm; caveat) | 9/14 GiB post-boot, 7/11 post-perf | **PASS-stable / no score gain; KV −21k vs C5 (no marginal gain)** — safe := 0.79921875; next interval (0.79921875, 0.80) |
 | C7 | C6 0.79921875 PASS -> bisection midpoint of (0.79921875, 0.80) -> test 0.799609375 | GMU 0.79921875->0.799609375 | PASS | 3,876,094 | 14.79x | 86 (118/138) | 22.0-24.0 / 87.39s cold | ~8.7 GiB | **PASS-stable / no score gain; PHASE A closed — GMU*=0.799609375; next interval (0.799609375, 0.80)** |
-| C8–C13 | — | — | — | — | — | — | — | — | — |
+| C8 | C7 PASS -> PHASE B knob 1: MTP 0->3 + MTP_DRAFT_VOCAB 47k at GMU* (spec A/B vs MTP0 best-so-far) | GMU* fixed; MTP 0->3, draft 47k | **FAIL** | 3,122,296 | 11.91x | 85 (55P/7Pa/7F) eval ok | n/a | ~10.9 GiB pre-crash | **FAIL — engine SIGKILL 137 mid-decodebench (GPU OOM NV_ERR_NO_MEMORY); MTP3+47k excluded-unsafe; MTP reverts to 0 best-so-far** |
+| C9 | C8 FAIL -> revert MTP to 0 (best-so-far); next knob MNT 8192->16384 at GMU* | GMU* fixed; MNT 8192->16384, MTP0 | — | — | — | — | — | — | — |
 | C14 | — | — | — | — | — | — | — | — | — |
 | C15 | — | — | — | — | — | — | — | — | — |
 
