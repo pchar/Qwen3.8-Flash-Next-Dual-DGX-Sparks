@@ -42,11 +42,12 @@ point in the space); otherwise it is recorded from 006 as excluded-unsafe.
 
 ```
 PHASE: A (GMU root search, slots C1–C7)
-interval (safe, unsafe) = (0.7984375, 0.80)    # 0.7984375 PASS (C5); 0.80 FAIL (003)
-GMU* = 0.7984375 (last safe GMU tested; frozen after C7)
-KV at GMU* = 3,876,094 fp8 tokens (MTP0, 14.79x at 262K), eval at GMU* = 83/100 (C5; inside 83-89 variance band, below LKG 89)
-KV marginal slope: C4->C5 +13.6k fp8 tokens per 0.0015625 GMU — steepening near the boundary (C3->C4 +101k / 0.003125); no cliff before 0.80 yet
-MemAvail margin eroding with GMU: C1 16.96 / C2 13.17 / C3 12.30 / C4 12.0 / C5 11 GiB (post-boot, orcus) — a FAIL at 0.79921875 would likely be memwatch-driven like 003
+interval (safe, unsafe) = (0.79921875, 0.80)   # 0.79921875 PASS (C6); 0.80 FAIL (003)
+GMU* = 0.79921875 (last safe GMU tested; frozen after C7)
+KV at GMU* = 3,854,880 fp8 tokens (MTP0, 14.71x at 262K), eval at GMU* = 86/100 (C6; inside 83-89 variance band, below LKG 89)
+KV marginal slope: C5->C6 −21.2k fp8 tokens per +0.00078125 GMU — NON-MONOTONIC (allocator block granularity); marginal gain has hit ~0 before the 0.80 cliff, so C7 will move KV ~0 either way
+MemAvail margin eroding with GMU: C1 16.96 / C2 13.17 / C3 12.30 / C4 12.0 / C5 11 / C6 9 GiB (post-boot, orcus) — floor intact at C6 (post-perf 7 GiB); C7 at 0.799609375 is 0.000390625 from 0.80, a memwatch kill is the leading risk, as at 0.80 (003).
+C6 perf caveat: 200k rows measured WARM (cold prefill absorbed during the 39-min eval; re-run confirmed still warm) — cold-200k TTFT not comparable to C1-C5; decode ~24 tok/s (warm) also not directly comparable
 
 Per-knob best-so-far (Phase B baseline, initialized to LKG):
   MTP  = 0
@@ -56,7 +57,7 @@ Per-knob best-so-far (Phase B baseline, initialized to LKG):
   EP   = false
 Excluded-unsafe so far: EP=true@0.75 (006), GMU 0.80 (003), MNT 4096@0.75 (004)
 Score note: eval scores across stable GMUs so far — 0.70: 83 (001), 0.75: 85/89 (002/005/008),
-0.775: 86 (C1), 0.7875: 86 (C2), 0.79375: 85 (C3), 0.796875: 86 (C4). GMU alone has not lifted the score above the LKG 89 reference.
+0.775: 86 (C1), 0.7875: 86 (C2), 0.79375: 85 (C3), 0.796875: 86 (C4), 0.7984375: 83 (C5), 0.79921875: 86 (C6). GMU alone has not lifted the score above the LKG 89 reference.
 ```
 
 ## Results table
@@ -82,7 +83,7 @@ Candidate rows (C1–C15, filled by each sweep run):
 | C3 | C2 0.7875 PASS -> bisection midpoint of (0.7875, 0.80) -> test 0.79375 | GMU 0.7875->0.79375 | PASS | 3,760,932 | 14.35x | 85 (55P/7Pa/7F) | 21.9 / 86.99s | 12.30/15 GiB (post-boot) | **PASS-stable / no score gain** — safe := 0.79375; next interval (0.79375, 0.80) |
 | C4 | C3 0.79375 PASS -> bisection midpoint of (0.79375, 0.80) -> test 0.796875 | GMU 0.79375->0.796875 | PASS | 3,862,456 | 14.73x | 86 (56P/7Pa/6F) | 22.2 / 89.25s | 12.0/12 GiB (post-boot) | **PASS-stable / no score gain** — safe := 0.796875; next interval (0.796875, 0.80) |
 | C5 | C4 0.796875 PASS -> bisection midpoint of (0.796875, 0.80) -> test 0.7984375 | GMU 0.796875->0.7984375 | PASS | 3,876,094 | 14.79x | 83 (114/138) | 22.0 / 87.15s | 11/14 GiB (post-boot) | **PASS-stable / no score gain** — safe := 0.7984375; next interval (0.7984375, 0.80) |
-| C6 | C5 0.7984375 PASS -> bisection midpoint of (0.7984375, 0.80) -> test 0.79921875 | GMU 0.7984375->0.79921875 (derived, testing) | — | — | — | — | — | — | in progress |
+| C6 | C5 0.7984375 PASS -> bisection midpoint of (0.7984375, 0.80) -> test 0.79921875 | GMU 0.7984375->0.79921875 | PASS | 3,854,880 | 14.71x | 86 (55P/8Pa/6F) | 24.0 / n/c (warm; caveat) | 9/14 GiB post-boot, 7/11 post-perf | **PASS-stable / no score gain; KV −21k vs C5 (no marginal gain)** — safe := 0.79921875; next interval (0.79921875, 0.80) |
 | C7 | — | — | — | — | — | — | — | — | — |
 | C8–C13 | — | — | — | — | — | — | — | — | — |
 | C14 | — | — | — | — | — | — | — | — | — |
@@ -99,13 +100,22 @@ Candidate rows (C1–C15, filled by each sweep run):
 - **Risk note:** 0.7984375 is only 0.0015625 below the known-unsafe 0.80 and MemAvail has eroded to ~12 GiB (C1 16.96 / C2 13.17 / C3 12.30 / C4 12.0) — a memwatch kill at warmup is now the most likely outcome, as at 0.80 (003).
 - **RESULT:** PASS — boot ~12 min, 0 OOM/Xid/watchdog (boot + eval + perf), KV 3,876,094 (14.79x), eval 83/100 (114/138), perf 22.0 tok/s / 87.15s cold TTFT, MemAvail 11/14 GiB post-boot (floor intact). safe := 0.7984375; GMU* = 0.7984375; next interval (0.7984375, 0.80).
 
-### C6 (TASK-73.14) — derived 2026-09-23 from C5 result (EXECUTING — see docs/tune/014-c6-gmu0.79922.md)
+### C6 (TASK-73.14) — derived 2026-09-23 from C5 result (EXECUTED — see docs/tune/014-c6-gmu0.79922.md)
 
 - **Previous result:** C5 GMU 0.7984375 PASS (stable boot, 0 OOM/Xid/watchdog, MemAvail 11/14 GiB post-boot; KV 3,876,094 = 14.79x; eval 83/100).
 - **Rule applied:** PHASE A bisection — 0.7984375 PASS -> safe := 0.7984375; test midpoint of (0.7984375, 0.80): (0.7984375 + 0.80) / 2 = **0.79921875** (8-decimal).
 - **New search state (pre-test):** interval (0.7984375, 0.80), candidate GMU 0.79921875. Update on result: PASS -> safe := 0.79921875, next interval (0.79921875, 0.80); FAIL -> unsafe := 0.79921875, next interval (0.7984375, 0.79921875).
 - **Config to test:** GMU 0.79921875; everything else = LKG (MTP0 / MNT 8192 / seqs 8 / mamba bf16 / EP false / KV fp8 / PLE packed / 262144 ctx / 40 GiB container / 6 GiB memwatch floor). Profile: `profiles/c6-gmu0.79921875.env`.
 - **Risk note:** 0.79921875 is only 0.00078125 below the known-unsafe 0.80 and MemAvail has eroded to ~10-11 GiB (C5 11) — a memwatch kill at warmup is now the near-certain outcome, as at 0.80 (003). Expected KV gain over C5: ~7-9k tokens if it boots.
+- **RESULT:** PASS — boot ~12.4 min, 0 OOM/Xid/watchdog/memwatch (boot + eval + perf), KV 3,854,880 (14.71x; −21,214 vs C5 — no marginal KV gain), eval 86/100 (55P/8Pa/6F), decode ~24 tok/s warm (200k rows warm — cold TTFT n/c, see record), MemAvail 9/14 GiB post-boot, 7/11 post-perf (floor intact). safe := 0.79921875; GMU* = 0.79921875; next interval (0.79921875, 0.80).
+
+### C7 (TASK-73.15) — derived 2026-09-23 from C6 result (to be executed by next run)
+
+- **Previous result:** C6 GMU 0.79921875 PASS (stable boot, 0 OOM/Xid/watchdog, MemAvail 9/14 GiB post-boot; KV 3,854,880 = 14.71x (−21k vs C5); eval 86/100).
+- **Rule applied:** PHASE A bisection — 0.79921875 PASS -> safe := 0.79921875; test midpoint of (0.79921875, 0.80): (0.79921875 + 0.80) / 2 = **0.799609375** (9-decimal, final bisection step).
+- **New search state (pre-test):** interval (0.79921875, 0.80), candidate GMU 0.799609375. Update on result: PASS -> safe := 0.799609375, next interval (0.799609375, 0.80); FAIL -> unsafe := 0.799609375, next interval (0.79921875, 0.799609375). After C7: GMU* = max safe GMU tested, FROZEN for Phase B.
+- **Config to test:** GMU 0.799609375; everything else = LKG (MTP0 / MNT 8192 / seqs 8 / mamba bf16 / EP false / KV fp8 / PLE packed / 262144 ctx / 40 GiB container / 6 GiB memwatch floor). Profile: `profiles/c7-gmu0.799609375.env`.
+- **Risk note:** 0.799609375 is 0.000390625 below the known-unsafe 0.80 and MemAvail post-boot is ~9 GiB (post-perf 7) — a memwatch kill at warmup is the most likely outcome, as at 0.80 (003). Expected KV delta ~0 (allocator granularity). This is the last PHASE A step: whichever outcome, GMU* is set and Phase B (C8-C13) starts at GMU*.
 
 ### C4 (TASK-73.12) — derived 2026-09-23 from C3 result (EXECUTED — see docs/tune/012-c4-gmu0.796875.md)
 
