@@ -104,10 +104,19 @@ Candidate rows (C1–C15, filled by each sweep run):
 | C8 | C7 PASS -> PHASE B knob 1: MTP 0->3 + MTP_DRAFT_VOCAB 47k at GMU* (spec A/B vs MTP0 best-so-far) | GMU* fixed; MTP 0->3, draft 47k | **FAIL** | 3,122,296 | 11.91x | 85 (55P/7Pa/7F) eval ok | n/a | ~10.9 GiB pre-crash | **FAIL — engine SIGKILL 137 mid-decodebench (GPU OOM NV_ERR_NO_MEMORY); MTP3+47k excluded-unsafe; MTP reverts to 0 best-so-far** |
 | C9 | C8 FAIL -> revert MTP to 0; knob MNT 8192->16384 at GMU* | GMU* fixed; MNT 8192->16384, MTP0 | **FAIL** | 3,347,260 | 12.77x | 86 (55P/9Pa/5F) eval ok | 22.1-24.3 @1k then crash | ~13.0 GiB pre-crash | **FAIL — SIGKILL 137 on 200k prefill (GPU OOM NV_ERR_NO_MEMORY); MNT 16384 excluded-crash; MNT knob resolves to 8192** |
 | C12 | knob 4: mamba-ssm bf16->fp8 at GMU* (shrink GDN state) | GMU* fixed; MAMBA bf16->fp8 | **FAIL (invalid)** | — | — | — | — | — | — | **FAIL — vllm serve rejects --mamba-ssm-cache-dtype fp8 (invalid choice; build v0.1.dev20073 supports auto/bf16/f16/f32 only). MAMBA knob RESOLVED to bf16 (LKG); fp8 excluded-invalid** |
+| C10 | C9 FAIL (MNT 16384 crash) -> MNT knob probe down: 8192->4096 at GMU* (A/B vs C9) | GMU* fixed; MNT 8192->4096, MTP0 | PASS (boot 14min, attempt 3 after host-floor kill + orphan-rank reject) | 4,074,596 | 15.54x (highest of sweep) | 88 (57P/7Pa/5F, 121/138) | n/a — perf leg never ran | 7.8 GiB post-boot (tightest of sweep), drained to floor | **FAIL-survival — 6 GiB memwatch kill 12:00:59Z post-eval (host-RAM, not GPU); eval gate met 88>=86 but no decodebench survival; MNT 4096 excluded; MNT knob RESOLVED to 8192** |
+| C11 | C10 FAIL -> MNT stays 8192; knob seqs 8->16 at GMU* (README: scheduler admits <=8 at 262K, seqs is the real concurrency lever) | GMU* fixed; seqs 8->16, MTP0/MNT8192 | (previous run: boot PASS, KV 3,910,946=14.92x, eval interrupted 49/69 no score; cluster died) | — | — | — | — | — | — | **RE-RUN REQUIRED (clean boot + full eval + decodebench); keep seqs 16 iff eval >= 86 AND survives decodebench** |
 | C14 | — | — | — | — | — | — | — | — | — |
-| C15 | — | — | — | — | — | — | — | — | — |
 
 ## Decision blocks (per run, appended newest-first)
+### C10 (TASK-73.18) — EXECUTED 2026-09-25 (see docs/tune/020-c10-mnt4096.md)
+
+- **Previous result:** C9 MNT 16384 FAIL (GPU OOM SIGKILL on 200k prefill; MNT knob unresolved among 4096/8192/16384).
+- **Rule applied:** MNT A/B at GMU* — 16384 excluded-crash; test the other extreme 4096 (004 already FAILed 4096 at 0.75 with eval 83; at GMU* 4096 tests whether a lower batch budget buys decode stability or just loses eval).
+- **Result:** boot PASS (attempt 3; attempt 1 host-memwatch floor kill, attempt 2 REQUIRE_IDLE_GPU orphan rank); KV 4,074,596 (15.54x, highest of sweep); eval **88/100** (121/138, 57P/7Pa/5F, 37 min, 0 preemptions); then host RAM drained 116->6 GiB and the 6 GiB floor fired at 12:00:59Z, decodebench never ran.
+- **Verdict:** FAIL-survival. Keep-rule (eval >= 86 AND survives decodebench) not met. MNT 4096 EXCLUDED. **MNT knob RESOLVED to 8192** (4096: 004 eval FAIL + C10 survival FAIL; 16384: crash; 8192: PASS everywhere, LKG).
+- **Decision for C11:** MNT fixed at 8192; next knob = MAX_NUM_SEQS 8->16 at GMU* (the README concurrency lever; untested). RISK: 16-way GDN recurrent state at knife-edge GMU* + tightest host margins; near-certain pressure. Keep seqs 16 iff eval >= 86 AND survives decodebench, else revert to 8.
+
 
 ### C5 (TASK-73.13) — derived 2026-09-23 from C4 result (EXECUTED — see docs/tune/013-c5-gmu0.7984375.md)
 
