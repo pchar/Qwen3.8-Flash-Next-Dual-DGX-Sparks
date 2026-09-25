@@ -179,6 +179,24 @@ config regression.
 
 ---
 
+### C15 confirmation (2026-09-25) — sweep-complete fresh re-verification
+
+A second fresh standard restart of the committed production profile
+(`profiles/production.env`, LKG) was run as the final convergence candidate
+C15 (TASK-73.23): stop + drop_caches both nodes, relaunch 16:22:20Z, no config
+departure (engine cmdline = GMU 0.75 / MNT 8192 / seqs 8). Verified: /health
+200, /v1/models 262144, real completion, PLE registrations complete on BOTH
+nodes, KV 2,979,046 (11.36x), 0 OOM/Xid/watchdog, 6 GiB floor intact. Full
+standard suite from jupiter: **88/100 (121/138, 57P/7Pa/5F)** — reproduces the
+tune-5 89 within the measured fresh-run band (83-88) and the full suite was
+SURVIVED (the property no GMU* config had). Image
+sha256:d464f3b466fa9c45ddbff8a812e80564503b6879a9fd95c1a47514f3f0df5a4a, model
+revision 236dfdf285828023ca3bcd3f37366c58a3469b13, fork m8-tune commit
+34714dc + this update. `production.env` KEPT at LKG (no departure); rollback
+path = the same profile (byte-identical) + the rollback commits below.
+
+---
+
 ## 4. Safety thresholds & rollback evidence
 
 - Watchdog: `MEMWATCH_MIN_GIB=6` floor, container cap `CONTAINER_MEM_GIB=40`;

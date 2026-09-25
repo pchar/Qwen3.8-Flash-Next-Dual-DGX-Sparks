@@ -19,4 +19,14 @@ Convergence verdict (C14): no GMU* (0.799609375) config survives the full standa
 - KV: 2,979,046 fp8 tokens (11.36x @262K; tune-5 original 2,957,832 = 11.28x — allocator variance, +0.7%)
 - 0 OOM / 0 Xid / 0 watchdog events; 6 GiB floor intact (MemAvail 14-19 GiB)
 
-## Eval (pending — in flight)
+## Eval (measured — full standard suite)
+- tool-eval-bench v1.8.0, full defaults, --base-url http://orcus.lan:8888/v1 from jupiter.lan (launched 16:37Z, wall 2195.7s)
+- Report: /Users/pch/runs/2026/09/2026-09-25T16-36-34Z_f2e604.md
+- **88/100 (121/138 pts): 57 PASS / 7 PARTIAL / 5 FAIL** — Quality 88/100, Deployability 66/100 (alpha 0.7), Responsiveness 16/100 (median turn 8.9s)
+- 1 safety warning (TC-34 partial injection compliance) — same case the tune-5 89-sample also failed; not a regression
+- **Reproduces 89 within eval variance**: fresh LKG runs on this sweep measure 83-88 (TASK-73.08 fresh runs 83-84, C15 88); the single 89 was a favorable sample (documented in REPORT.md §3). 88 is inside the 83-89 band and above the owner sweep gate (>=83).
+- **Server survived the full suite** (health 200 at completion; 0 OOM/Xid/watchdog; MemAvail 13-14 GiB, 6 GiB floor intact) — the LKG floor-safety property re-confirmed on a fresh restart.
+- Perf leg: not re-run for C15 (identical config to the LKG already measured in the full standard test suite of TASK-73.08: decodebench 1k/200k recorded in REPORT.md §3); C15 scope is reproducibility of the config + eval, which holds.
+
+## Verdict
+**PASS — LKG CONFIRMED as production candidate.** Fresh standard restart reproduces the LKG within eval variance (88 vs 89, band 83-89), full suite survived, floor intact. Best safe config of the entire sweep (tune-5 winner: GMU 0.75 / MTP0 / MNT 8192 / seqs 8 / mamba bf16 / EP false, KV ~2.98M tokens). production.env KEPT at LKG (no departure); rollback path = same profile (byte-identical), rollback commits in REPORT.md §4. Sweep (15 candidates C1-C15) complete: no config beat LKG on quality while surviving the suite; GMU* configs are capacity-only (+32% KV) but floor-unsafe under sustained 262K load.
