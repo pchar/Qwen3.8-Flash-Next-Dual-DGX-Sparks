@@ -106,9 +106,20 @@ Candidate rows (C1–C15, filled by each sweep run):
 | C12 | knob 4: mamba-ssm bf16->fp8 at GMU* (shrink GDN state) | GMU* fixed; MAMBA bf16->fp8 | **FAIL (invalid)** | — | — | — | — | — | — | **FAIL — vllm serve rejects --mamba-ssm-cache-dtype fp8 (invalid choice; build v0.1.dev20073 supports auto/bf16/f16/f32 only). MAMBA knob RESOLVED to bf16 (LKG); fp8 excluded-invalid** |
 | C10 | C9 FAIL (MNT 16384 crash) -> MNT knob probe down: 8192->4096 at GMU* (A/B vs C9) | GMU* fixed; MNT 8192->4096, MTP0 | PASS (boot 14min, attempt 3 after host-floor kill + orphan-rank reject) | 4,074,596 | 15.54x (highest of sweep) | 88 (57P/7Pa/5F, 121/138) | n/a — perf leg never ran | 7.8 GiB post-boot (tightest of sweep), drained to floor | **FAIL-survival — 6 GiB memwatch kill 12:00:59Z post-eval (host-RAM, not GPU); eval gate met 88>=86 but no decodebench survival; MNT 4096 excluded; MNT knob RESOLVED to 8192** |
 | C11 | C10 FAIL -> MNT stays 8192; knob seqs 8->16 at GMU* (README: scheduler admits <=8 at 262K) | GMU* fixed; seqs 8->16, MTP0/MNT8192 | PASS (clean re-run boot ~12min; prior run: boot PASS, eval interrupted 49/69 no score, ~24h = cluster death not slowness) | 3,894,277 | 14.85x | 89 (58P/7Pa/4F, 123/138, sweep-best) | 21.6-24.0 @1k, then 200k leg n/a | ~7-8 GiB, drained to floor at 200k prefill | **FAIL-survival — 6 GiB memwatch kill 14:37:16Z during decodebench 200k prefill (host RAM); eval gate met 89>=86; seqs 16 excluded-survival; SEQs RESOLVED to 8 (LKG)** |
-| C14 | — | — | — | — | — | — | — | — | — |
+| C13 | C11 FAIL -> seqs stays 8; last discrete knob: EP false->true at GMU* (A/B; 006 already excluded EP at 0.75, run for grid completeness) | GMU* fixed; EP false->true, LKG base otherwise | PASS (boot ~11min, enable_expert_parallel=True, KV 3,816,998=14.56x) | 3,816,998 | 14.56x | 74 (artifact: 31/31 FAILs = 'connection failed' after death; pre-death passing ~TC-37) | n/a (server dead) | 6103 MiB at kill | **FAIL-survival — 6 GiB memwatch kill 15:25:12Z ~5min into eval (host-RAM leak, 006 signature); EP=true excluded-unsafe; EP RESOLVED to false (LKG)** |
+| C14 | C13 FAIL -> all discrete knobs resolved (MTP0/MNT8192/seqs8/mamba-bf16/EP-false); composite = LKG base at GMU* | GMU* fixed; LKG base, no knob change | pending | pending | pending | pending | pending | pending | pending | **COMPOSITE = LKG-at-GMU* (full suite; expected FAIL-survival per C10/C11 pattern)** |
+| C15 | — | — | — | — | — | — | — | — | — |
 
 ## Decision blocks (per run, appended newest-first)
+### C13 (TASK-73.21) — EXECUTED 2026-09-25 (see docs/tune/021-c13-ep-true.md)
+
+- **Previous result:** C11 seqs16 FAIL-survival; all discrete knobs but EP resolved; 006 already showed EP-true leaks host RAM at 0.75.
+- **Rule applied:** one knob per candidate — last grid cell: ENABLE_EXPERT_PARALLEL false->true at GMU* LKG base.
+- **Result:** boot PASS ~11 min (enable_expert_parallel=True, EP workers, KV 3,816,998 = 14.56x); host-RAM leak began immediately; 6 GiB floor killed orcus vllm-fn at 15:25:12Z (~5 min into eval, MemAvailable 6103 MiB); eval finished 872.2s with 31 'connection failed' FAILs (74/138 artifact); decodebench never ran; 0 Xid / 0 GPU OOM.
+- **Verdict:** FAIL-survival. EP=true excluded-unsafe at GMU* (and already at 0.75, 006). **EP RESOLVED to false (LKG).**
+- **Decision for C14:** every discrete knob is now resolved: MTP 0 / MNT 8192 / seqs 8 / mamba bf16 / EP false. **C14 composite = LKG base at GMU*** (all-resolved values + GMU 0.799609375) — no knob change vs the C7 base; run the full suite for grid completeness. Expectation from the C10/C11 pattern: FAIL-survival at the 6 GiB floor under sustained 262K load; if it survives, GMU* LKG base becomes the capacity candidate for C15 vs the GMU 0.75 production LKG.
+- **Decision for C15:** production-candidate confirmation — fresh two-node launch of whichever config wins (expected: GMU 0.75 LKG, already AC#5-verified; GMU* base only if C14 survives its full suite).
+
 ### C11 (TASK-73.19) — EXECUTED 2026-09-25 clean re-run (see docs/tune/019-c11-seqs16.md)
 
 - **Previous state:** interrupted run had boot PASS (KV 3,910,946) but eval aborted 49/69 with no score after a ~24h wall (cluster died mid-run); ticket reopened for a clean re-run.

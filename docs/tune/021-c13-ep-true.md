@@ -17,8 +17,13 @@
 - Post-boot host MemAvailable ~8 GiB (6 GiB floor intact; margin tighter than LKG base)
 - Risk baseline: 006 showed EP-true FAILs at GMU 0.75 (eval 83 + host-RAM leak 8.3->5.9 GiB over 40 min -> memwatch kill). At GMU* the post-boot margin (~7.8-8 GiB) is tighter, so the same leak is expected to trip the floor.
 
-## Eval / perf
-IN FLIGHT — tool-eval-bench launched on jupiter 2026-09-25 ~15:20Z (pid 13178, log /Users/pch/tune/c13-eval.log, wall-time capture required). Decodebench (1k/200k) runs after eval. Verdict + measured evidence to be appended by the next run.
+## Eval / perf (measured)
+
+- tool-eval-bench v1.8.0, launched ~15:20Z (pid 13178, log /Users/pch/tune/c13-eval.log), report /Users/pch/tune/runs/2026/09/2026-09-25T15-10-41Z_f2e604.md
+- **Server died mid-eval:** 6 GiB host memwatch floor killed orcus vllm-fn at **17:25:12 local (15:25:12Z), MemAvailable 6103 MiB < 6 GiB** (memwatch-head.log), ~5 min into the run. Host-RAM leak, identical failure family to 006 (8.3->5.9 GiB over 40 min at 0.75).
+- Eval finished (wall 872.2s) with the tail meaningless: **36 PASS / 2 PARTIAL / 31 FAIL, 74/138, Quality 54/100** — but 31 of the 31 FAILs are All connection attempts failed (server already dead). Pre-death the run was passing through ~TC-37, so the 74 is a connection-failure artifact, NOT a quality measurement.
+- Decodebench (1k/200k) never ran (server dead).
+- No GPU OOM / no Xid: the kill is the **host** RAM floor, exactly the 006 EP-leak signature.
 
 ## Verdict
-PENDING — expected FAIL-survival (EP leak -> 6 GiB floor), matching 006. Keep EP=false (LKG) unless a full suite (boot+eval+decodebench) passes cleanly.
+**FAIL-survival (confirmed).** EP-true at GMU* leaks host RAM and trips the 6 GiB floor during the standard eval, reproducing 006. Eval gate not meaningfully met (server died ~5 min in); decodebench never ran. **ENABLE_EXPERT_PARALLEL RESOLVED to false (LKG); EP=true excluded-unsafe** at both 0.75 (006) and GMU* (C13).
